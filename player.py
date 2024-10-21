@@ -2,9 +2,7 @@ import math
 
 import pygame as pg
 
-PLAYER_STEP_WIDTH = 0.15
-PLAYER_ANGLE_LINE_LENGTH = 15
-
+from settings import *
 
 class Player:
     def __init__(self, surface, start_x, start_y):

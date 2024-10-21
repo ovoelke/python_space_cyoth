@@ -1,5 +1,5 @@
-import Game as cyoth
+import game
 
 if __name__ == '__main__':
-    instance = cyoth.Game()
+    instance = game.Game()
     instance.run()

@@ -1,30 +1,30 @@
 import pygame as pg
 
+from settings import *
 from player import Player
-
-WINDOW_TITLE = 'Cyoth'
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
-WINDOW_BG_COLOR = (0, 0, 0)
-TILE_SIZE = 10
-TILES_HORIZONTALLY = WINDOW_WIDTH // TILE_SIZE
-TILES_VERTICALLY = WINDOW_HEIGHT // TILE_SIZE
+from network_manager import NetworkManager
 
 
 class Game:
-    def __init__(self, true=True):
+    def __init__(self):
+        self.running = True
         pg.init()
         self.clock = pg.time.Clock()
         pg.display.set_caption(WINDOW_TITLE)
         self.surface = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        self.running = true
         self.player = Player(self.surface, 20, 30)
-        self.mouse_move = None
-        self.mouse_click = None
+        self.mouse_pos_move = None
+        self.mouse_pos_click = None
+        self.mouse_pos_click_before = None
+        self.network_manager = NetworkManager()
 
     def run(self):
         while self.running:
             self.main_loop()
+
+        if self.network_manager.is_active:
+            self.network_manager.stop()
+
         pg.quit()
 
     def main_loop(self):
@@ -42,22 +42,38 @@ class Game:
             if event.type == pg.QUIT:
                 self.running = False
             elif event.type == pg.MOUSEBUTTONUP:
-                self.mouse_click = pg.mouse.get_pos()
+                self.mouse_pos_click = pg.mouse.get_pos()
             elif event.type == pg.MOUSEMOTION:
-                self.mouse_move = pg.mouse.get_pos()
+                self.mouse_pos_move = pg.mouse.get_pos()
+            elif event.type == pg.KEYUP:
+                if event.key == pg.K_s:
+                    # s => start server
+                    self.network_manager.start_server()
+                elif event.key == pg.K_c:
+                    # c => connect to server
+                    self.network_manager.connect_to_server()
 
-        if self.mouse_move:
-            new_angle = self.player.get_angle(self.mouse_move)
+        if self.mouse_pos_move:
+            new_angle = self.player.get_angle(self.mouse_pos_move)
             self.player.angle = new_angle
 
-        if self.mouse_click:
-            finish = self.player.move(self.mouse_click)
-            if finish:
-                self.mouse_click = None
+        if self.mouse_pos_click:
+            # updating position...
+            if self.mouse_pos_click_before is not self.mouse_pos_click:
+                self.mouse_pos_click_before = self.mouse_pos_click
+                self.network_manager.send_data(self.mouse_pos_click)
+
+            player_halted = self.player.move(self.mouse_pos_click)
+            if player_halted:
+                self.mouse_pos_click = None # ...clear position
+
+        if self.network_manager.is_server and len(self.network_manager.clients) > 0:
+            print(f'clients: {len(self.network_manager.clients)}')
 
         self.player.draw()
-
         pg.display.update()
+
+        self.clock.tick(30)
 
 
 if __name__ == '__main__':
