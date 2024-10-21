@@ -10,12 +10,12 @@ class NetworkManager:
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.clients = []
-        self.opponents = []
+        self.opponents = {}
         self.is_server = False
-        self.is_active = False
+        self.is_running = False
 
     def start_server(self):
-        if self.is_server or self.is_active:
+        if self.is_server or self.is_running:
             return
 
         self.sock.bind((self.host, self.port))
@@ -25,8 +25,8 @@ class NetworkManager:
         threading.Thread(target=self._accept_connections).start()
 
     def stop(self):
-        self.is_active = False
         self.is_server = False
+        self.is_running = False
 
     def connect_to_server(self):
         try:
@@ -37,15 +37,15 @@ class NetworkManager:
             print(f"Connection to host failed: {e}")
 
     def _accept_connections(self):
-        while self.is_active:
+        self.is_running = True
+        while self.is_running:
             client_socket, client_address = self.sock.accept()
             self.clients.append(client_socket)
             print(f"Accepting client connection from: {client_address}")
             threading.Thread(target=self._handle_client, args=(client_socket,)).start()
 
     def _handle_client(self, client_socket):
-        self.is_active = True
-        while self.is_active:
+        while self.is_running:
             try:
                 data = client_socket.recv(1024)
                 if not data:
@@ -59,7 +59,8 @@ class NetworkManager:
         self.clients.remove(client_socket)
 
     def _receive_data(self):
-        while self.is_active:
+        self.is_running = True
+        while self.is_running:
             try:
                 data = self.sock.recv(1024)
                 if not data:
@@ -67,12 +68,19 @@ class NetworkManager:
 
                 print(f"Receiving data from Server: {data.decode()}")
 
+                # updating opponents
+                encoded = data.decode()
+                opponent_id = str(encoded.split(",")[0])
+                opponent_x = int(encoded.split(",")[1])
+                opponent_y = int(encoded.split(",")[2])
+                self.opponents = {opponent_id: {'x': opponent_x, 'y': opponent_y}}
+
             except Exception as e:
                 print(f"Error while receive data: {e}")
                 break
 
-    def send_data(self, data):
-        data_str = f"{data[0]},{data[1]}"
+    def send_data(self, player_id, data):
+        data_str = f"{str(player_id)}, {data[0]},{data[1]}"
         if self.is_server:
             print(f"Sending data broadcast: {data_str}")
             self.broadcast_data(data_str.encode())

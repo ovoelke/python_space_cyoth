@@ -13,6 +13,7 @@ class Game:
         pg.display.set_caption(WINDOW_TITLE)
         self.surface = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         self.player = Player(self.surface, 20, 30)
+        self.opponents = []
         self.mouse_pos_move = None
         self.mouse_pos_click = None
         self.mouse_pos_click_before = None
@@ -22,7 +23,7 @@ class Game:
         while self.running:
             self.main_loop()
 
-        if self.network_manager.is_active:
+        if self.network_manager.is_running:
             self.network_manager.stop()
 
         pg.quit()
@@ -61,19 +62,23 @@ class Game:
             # updating position...
             if self.mouse_pos_click_before is not self.mouse_pos_click:
                 self.mouse_pos_click_before = self.mouse_pos_click
-                self.network_manager.send_data(self.mouse_pos_click)
+
+                if self.network_manager.is_server:
+                    self.network_manager.send_data(self.player.id, self.mouse_pos_click)
 
             player_halted = self.player.move(self.mouse_pos_click)
             if player_halted:
-                self.mouse_pos_click = None # ...clear position
+                self.mouse_pos_click = None  # ...clear position
 
-        if self.network_manager.is_server and len(self.network_manager.clients) > 0:
-            print(f'clients: {len(self.network_manager.clients)}')
+        for opponent in self.network_manager.opponents:
+            x = self.network_manager.opponents[opponent].get('x')
+            y = self.network_manager.opponents[opponent].get('y')
+            pg.draw.circle(self.surface, pg.Color('green'), (x, y), 5)
 
         self.player.draw()
         pg.display.update()
 
-        self.clock.tick(30)
+        self.clock.tick(60)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import math
+import uuid
 
 import pygame as pg
 
@@ -6,6 +7,7 @@ from settings import *
 
 class Player:
     def __init__(self, surface, start_x, start_y):
+        self.id = uuid.uuid4()
         self.surface = surface
         self.x = start_x
         self.y = start_y
