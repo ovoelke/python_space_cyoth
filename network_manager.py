@@ -54,6 +54,8 @@ class NetworkManager:
                 if not data:
                     break
                 print(f"Receiving data from client: {data.decode()}")
+                encoded_str = data.decode()
+                self.handle_received_data(encoded_str)
                 self.broadcast_data(data, client_socket)
             except Exception as e:
                 print(f"Error while handle client: {e}")
@@ -70,18 +72,8 @@ class NetworkManager:
                     break
 
                 print(f"Receiving data from Server: {data.decode()}")
-
-                # updating opponents
-                encoded = data.decode()
-                o_name = str(encoded.split(",")[0])
-                o_loc_x = float(encoded.split(",")[1])
-                o_loc_y = float(encoded.split(",")[2])
-                o_tar_x = float(encoded.split(",")[3])
-                o_tar_y = float(encoded.split(",")[4])
-                unit = Unit(Vector2(o_loc_x, o_loc_y))
-                unit.name = o_name
-                unit.target = Vector2(o_tar_x, o_tar_y)
-                self.opponents = { o_name: unit }
+                encoded_str = data.decode()
+                self.handle_received_data(encoded_str)
 
             except Exception as e:
                 print(f"Error while receive data: {e}")
@@ -90,13 +82,14 @@ class NetworkManager:
     def send_data(self, player: Unit):
         data_str = f"{str(player.name)},{player.location[0]},{player.location[1]},{player.target[0]},{player.target[1]}"
         if self.is_server:
-            print(f"Sending data broadcast: {data_str}")
+            print(f"Sending data as broadcast: {data_str}")
             self.broadcast_data(data_str.encode())
         else:
             try:
+                print(f"Sending data: {data_str}")
                 self.sock.send(data_str.encode())
             except Exception as e:
-                print(f"Error while send data: {e}")
+                print(f"Error while sending data: {e}")
 
     def broadcast_data(self, data, sender_socket=None):
         for client in self.clients:
@@ -107,3 +100,15 @@ class NetworkManager:
                     print(f"Error while sending data as broadcast: {e}")
                     client.close()
                     self.clients.remove(client)
+
+    def handle_received_data(self, encoded_data: str):
+        # updating opponents
+        o_name = str(encoded_data.split(",")[0])
+        o_loc_x = float(encoded_data.split(",")[1])
+        o_loc_y = float(encoded_data.split(",")[2])
+        o_tar_x = float(encoded_data.split(",")[3])
+        o_tar_y = float(encoded_data.split(",")[4])
+        unit = Unit(Vector2(o_loc_x, o_loc_y))
+        unit.name = o_name
+        unit.target = Vector2(o_tar_x, o_tar_y)
+        self.opponents = {o_name: unit}

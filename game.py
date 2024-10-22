@@ -5,6 +5,9 @@ from models.unit import Unit
 from network_manager import NetworkManager
 from settings import *
 
+COLOR_BLUE = Color(0, 0, 255)
+COLOR_RED = Color(255, 0, 0)
+
 
 class Game:
     def __init__(self):
@@ -52,30 +55,34 @@ class Game:
             elif event.type == pg.KEYUP:
                 if event.key == pg.K_s:
                     # Key s: start server
+                    pg.display.set_caption(
+                        f"{WINDOW_TITLE} - Server - {self.network_manager.host}:{self.network_manager.port}")
                     self.network_manager.start_server()
                 elif event.key == pg.K_c:
                     # Key c: connect to server
+                    pg.display.set_caption(
+                        f"{WINDOW_TITLE} - Client - {self.network_manager.host}:{self.network_manager.port}")
                     self.network_manager.connect_to_server()
 
         self.player.update_position()
-        self.draw_unit(self.player, 'green')
+        self.draw_unit(self.player, COLOR_BLUE)
 
         # todo: i don't know if this is necessary...
         # update opponents from network manager with local opponents
         for key in self.network_manager.opponents:
-            unit =  self.network_manager.opponents[key]
+            unit = self.network_manager.opponents[key]
             if unit not in self.player_opponents:
-                #add
+                # add
                 self.player_opponents = {key: unit}
             else:
-                #refresh
+                # refresh
                 self.player_opponents[key].location = unit.location
                 self.player_opponents[key].target = unit.target
 
         # draw every opponent
         for opponent in self.player_opponents.values():
             opponent.update_position()
-            self.draw_unit(opponent, 'blue')
+            self.draw_unit(opponent, COLOR_RED)
 
         pg.display.update()
         self.clock.tick(60)
@@ -85,7 +92,7 @@ class Game:
         pg.draw.line(self.surface, pg.Color('yellow'), unit.location, unit.target, 1)
 
         # draw unit
-        pg.draw.circle(self.surface, pg.Color('red'), unit.location, 10)
+        pg.draw.circle(self.surface, color, unit.location, 10)
 
 
 if __name__ == '__main__':
