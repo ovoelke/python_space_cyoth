@@ -1,22 +1,23 @@
 import pygame as pg
+from pygame import Vector2, Color
 
-from settings import *
-from player import Player
+from models.unit import Unit
 from network_manager import NetworkManager
+from settings import *
 
 
 class Game:
     def __init__(self):
-        self.running = True
         pg.init()
-        self.clock = pg.time.Clock()
         pg.display.set_caption(WINDOW_TITLE)
+        self.running = True
+        self.clock = pg.time.Clock()
         self.surface = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-        self.player = Player(self.surface, 20, 30)
-        self.opponents = []
+
+        self.player = Unit(Vector2(20, 20))
+        self.player_opponents = {}
         self.mouse_pos_move = None
         self.mouse_pos_click = None
-        self.mouse_pos_click_before = None
         self.network_manager = NetworkManager()
 
     def run(self):
@@ -43,42 +44,51 @@ class Game:
             if event.type == pg.QUIT:
                 self.running = False
             elif event.type == pg.MOUSEBUTTONUP:
-                self.mouse_pos_click = pg.mouse.get_pos()
+                self.player.target = Vector2(event.pos[0], event.pos[1])
+                if self.network_manager.is_running:
+                    self.network_manager.send_data(self.player)
             elif event.type == pg.MOUSEMOTION:
                 self.mouse_pos_move = pg.mouse.get_pos()
             elif event.type == pg.KEYUP:
                 if event.key == pg.K_s:
-                    # s => start server
+                    # Key s: start server
                     self.network_manager.start_server()
                 elif event.key == pg.K_c:
-                    # c => connect to server
+                    # Key c: connect to server
                     self.network_manager.connect_to_server()
 
-        if self.mouse_pos_move:
-            new_angle = self.player.get_angle(self.mouse_pos_move)
-            self.player.angle = new_angle
+        self.player.update_position()
+        self.draw_unit(self.player, 'green')
 
-        if self.mouse_pos_click:
-            # updating position...
-            if self.mouse_pos_click_before is not self.mouse_pos_click:
-                self.mouse_pos_click_before = self.mouse_pos_click
+        # update opponents from network manager with local opponents
+        for key in self.network_manager.opponents:
+            unit =  self.network_manager.opponents[key]
+            if unit not in self.player_opponents:
+                #add
+                self.player_opponents = {key: unit}
+            else:
+                #refresh
+                self.player_opponents[key].location = unit.location
+                self.player_opponents[key].target = unit.target
 
-                if self.network_manager.is_server:
-                    self.network_manager.send_data(self.player.id, self.mouse_pos_click)
+        for opponent in self.player_opponents.values():
+            opponent.update_position()
+            self.draw_unit(opponent, 'blue')
 
-            player_halted = self.player.move(self.mouse_pos_click)
-            if player_halted:
-                self.mouse_pos_click = None  # ...clear position
-
-        for opponent in self.network_manager.opponents:
-            x = self.network_manager.opponents[opponent].get('x')
-            y = self.network_manager.opponents[opponent].get('y')
-            pg.draw.circle(self.surface, pg.Color('green'), (x, y), 5)
-
-        self.player.draw()
         pg.display.update()
-
         self.clock.tick(60)
+
+    def draw_unit(self, unit: Unit, color: Color):
+        # debug
+        if self.mouse_pos_move:
+            # line between unit and mouse
+            pg.draw.line(self.surface, pg.Color(color), self.player.location,
+                         (self.mouse_pos_move[0], self.mouse_pos_move[1]), 1)
+        # line between unit and target
+        pg.draw.line(self.surface, pg.Color('yellow'), self.player.location, self.player.target, 1)
+
+        # draw unit
+        pg.draw.circle(self.surface, pg.Color('red'), unit.location, 10)
 
 
 if __name__ == '__main__':

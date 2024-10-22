@@ -1,6 +1,9 @@
 import socket
 import threading
 
+from pygame import Vector2
+
+from models.unit import Unit
 from settings import *
 
 
@@ -70,17 +73,22 @@ class NetworkManager:
 
                 # updating opponents
                 encoded = data.decode()
-                opponent_id = str(encoded.split(",")[0])
-                opponent_x = int(encoded.split(",")[1])
-                opponent_y = int(encoded.split(",")[2])
-                self.opponents = {opponent_id: {'x': opponent_x, 'y': opponent_y}}
+                o_name = str(encoded.split(",")[0])
+                o_loc_x = float(encoded.split(",")[1])
+                o_loc_y = float(encoded.split(",")[2])
+                o_tar_x = float(encoded.split(",")[3])
+                o_tar_y = float(encoded.split(",")[4])
+                unit = Unit(Vector2(o_loc_x, o_loc_y))
+                unit.name = o_name
+                unit.target = Vector2(o_tar_x, o_tar_y)
+                self.opponents = { o_name: unit }
 
             except Exception as e:
                 print(f"Error while receive data: {e}")
                 break
 
-    def send_data(self, player_id, data):
-        data_str = f"{str(player_id)}, {data[0]},{data[1]}"
+    def send_data(self, player: Unit):
+        data_str = f"{str(player.name)},{player.location[0]},{player.location[1]},{player.target[0]},{player.target[1]}"
         if self.is_server:
             print(f"Sending data broadcast: {data_str}")
             self.broadcast_data(data_str.encode())
