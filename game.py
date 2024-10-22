@@ -60,6 +60,7 @@ class Game:
         self.player.update_position()
         self.draw_unit(self.player, 'green')
 
+        # todo: i don't know if this is necessary...
         # update opponents from network manager with local opponents
         for key in self.network_manager.opponents:
             unit =  self.network_manager.opponents[key]
@@ -71,6 +72,7 @@ class Game:
                 self.player_opponents[key].location = unit.location
                 self.player_opponents[key].target = unit.target
 
+        # draw every opponent
         for opponent in self.player_opponents.values():
             opponent.update_position()
             self.draw_unit(opponent, 'blue')
@@ -79,13 +81,8 @@ class Game:
         self.clock.tick(60)
 
     def draw_unit(self, unit: Unit, color: Color):
-        # debug
-        if self.mouse_pos_move:
-            # line between unit and mouse
-            pg.draw.line(self.surface, pg.Color(color), self.player.location,
-                         (self.mouse_pos_move[0], self.mouse_pos_move[1]), 1)
         # line between unit and target
-        pg.draw.line(self.surface, pg.Color('yellow'), self.player.location, self.player.target, 1)
+        pg.draw.line(self.surface, pg.Color('yellow'), unit.location, unit.target, 1)
 
         # draw unit
         pg.draw.circle(self.surface, pg.Color('red'), unit.location, 10)
