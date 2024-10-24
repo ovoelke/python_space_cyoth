@@ -1,13 +1,10 @@
 import pygame as pg
 from pygame import Vector2, Color
 
-from models.unit import Unit
+from models.player_node import PlayerNode
+from models.shoot_node import ShootNode
 from network_manager import NetworkManager
 from settings import *
-
-COLOR_BLUE = Color(0, 0, 255)
-COLOR_RED = Color(255, 0, 0)
-
 
 class Game:
     def __init__(self):
@@ -17,8 +14,9 @@ class Game:
         self.clock = pg.time.Clock()
         self.surface = pg.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 
-        self.player = Unit(Vector2(20, 20))
+        self.player = PlayerNode(Vector2(20, 20))
         self.player_opponents = {}
+        self.shoots = []
         self.mouse_pos_move = None
         self.mouse_pos_click = None
         self.network_manager = NetworkManager()
@@ -47,9 +45,12 @@ class Game:
             if event.type == pg.QUIT:
                 self.running = False
             elif event.type == pg.MOUSEBUTTONUP:
-                self.player.target = Vector2(event.pos[0], event.pos[1])
-                if self.network_manager.is_running:
-                    self.network_manager.send_data(self.player)
+                if event.button == 3: #right mouse button
+                    self.player.target = Vector2(event.pos[0], event.pos[1])
+                    if self.network_manager.is_running:
+                        self.network_manager.send_data(self.player)
+                if event.button == 1: #left mouse button
+                    self.shoots.append(ShootNode(self.player.location, Vector2(event.pos[0], event.pos[1]), die_on_target=True))
             elif event.type == pg.MOUSEMOTION:
                 self.mouse_pos_move = pg.mouse.get_pos()
             elif event.type == pg.KEYUP:
@@ -65,7 +66,7 @@ class Game:
                     self.network_manager.connect_to_server()
 
         self.player.update_position()
-        self.draw_unit(self.player, COLOR_BLUE)
+        self.draw_player(self.player, COLOR_BLUE)
 
         # todo: i don't know if this is necessary...
         # update opponents from network manager with local opponents
@@ -79,20 +80,38 @@ class Game:
                 self.player_opponents[key].location = unit.location
                 self.player_opponents[key].target = unit.target
 
+        # update shoots
+        for shoot in self.shoots:
+            shoot.update_position()
+            if shoot.alive is not True:
+                self.shoots.remove(shoot)
+            else:
+                self.draw_shoot(shoot, COLOR_GREEN)
+        
         # draw every opponent
         for opponent in self.player_opponents.values():
             opponent.update_position()
-            self.draw_unit(opponent, COLOR_RED)
+            self.draw_player(opponent, COLOR_RED)
+            
+        pg.display.set_caption(f"{WINDOW_TITLE} - Shoots: {len(self.shoots)}")
 
         pg.display.update()
         self.clock.tick(60)
 
-    def draw_unit(self, unit: Unit, color: Color):
+    def draw_player(self, node: PlayerNode, color: Color):
         # line between unit and target
-        pg.draw.line(self.surface, pg.Color('yellow'), unit.location, unit.target, 1)
+        pg.draw.line(self.surface, COLOR_GREEN, node.location, node.target, 1)
 
         # draw unit
-        pg.draw.circle(self.surface, color, unit.location, 10)
+        pg.draw.circle(self.surface, color, node.location, 10)
+    
+    
+    def draw_shoot(self, node: ShootNode, color: Color):
+        # line between unit and target
+        pg.draw.line(self.surface, COLOR_BLUE, node.location, node.target, 1)
+
+        # draw unit
+        pg.draw.circle(self.surface, color, node.location, 5)
 
 
 if __name__ == '__main__':

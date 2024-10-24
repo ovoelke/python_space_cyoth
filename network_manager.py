@@ -3,7 +3,7 @@ import threading
 
 from pygame import Vector2
 
-from models.unit import Unit
+from models.player_node import PlayerNode
 from settings import *
 
 
@@ -79,7 +79,7 @@ class NetworkManager:
                 print(f"Error while receive data: {e}")
                 break
 
-    def send_data(self, player: Unit):
+    def send_data(self, player: PlayerNode):
         data_str = f"{str(player.name)},{player.location[0]},{player.location[1]},{player.target[0]},{player.target[1]}"
         if self.is_server:
             print(f"Sending data as broadcast: {data_str}")
@@ -108,7 +108,7 @@ class NetworkManager:
         o_loc_y = float(encoded_data.split(",")[2])
         o_tar_x = float(encoded_data.split(",")[3])
         o_tar_y = float(encoded_data.split(",")[4])
-        unit = Unit(Vector2(o_loc_x, o_loc_y))
+        unit = PlayerNode(Vector2(o_loc_x, o_loc_y))
         unit.name = o_name
         unit.target = Vector2(o_tar_x, o_tar_y)
         self.opponents = {o_name: unit}
